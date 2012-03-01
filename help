@@ -220,6 +220,9 @@ OPTIONS
         destination folder(s) which don't match your desired output. Not required when
         using the --svndel option.
 
+    --orreplace
+        Modifies the function and view ddl files to replace CREATE with CREATE OR REPLACE.
+
     --sqldump
         Also generate a pg_dump file. Will only contain schemas and tables designated by
         original options. Note that other filtered items will NOT be filtered out of the
