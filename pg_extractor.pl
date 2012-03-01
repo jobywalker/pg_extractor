@@ -81,6 +81,11 @@ if ($O->{'sqldump'}) {
     copy_sql_dump();
 }
 
+if ($O->{'orreplace'}) {
+    print "Adding OR REPLACE clause...\n" if !$O->{'quiet'};
+    or_replace()
+}
+
 if ($O->{'svn'}) {
     svn_commit();
 }
@@ -175,6 +180,8 @@ sub get_options {
         'gitcmd=s',
         'commitmsg=s',
         'commitmsgfn=s',
+
+        'orreplace!',
 
         'help|?',
 
@@ -962,6 +969,23 @@ sub svn_commit {
 
 }
 
+sub or_replace {
+    my $replace_cmd = "/usr/bin/env perl -pi -e 's/CREATE (FUNCTION|VIEW)/CREATE OR REPLACE \$1/'";
+    chdir $O->{'basedir'};
+    unless (-d 'function' || -d 'view') {
+        print "no functions or views\n";
+        return;
+    }
+    if (-d 'function') {
+        $replace_cmd .= ' function/*';
+    }
+    if (-d 'view') {
+        $replace_cmd .= ' view/*';
+    }
+    print "$replace_cmd\n" if !$O->{'quiet'};
+    system $replace_cmd;
+}
+
 sub die_cleanup {
     my $message = shift @_;
     cleanup();
@@ -1247,6 +1271,10 @@ File containing the commit message to send to git or svn
 
 Use when running again on the same destination directory as previous runs so that objects deleted from the
 database or items that don't match your filters also have their old files deleted. WARNING: This WILL delete ALL .sql files in the destination folder(s) which don't match your desired output. Not required when using the --svndel option.
+
+=item --orreplace
+
+Modifies the function and view ddl files to replace CREATE with CREATE OR REPLACE.
 
 =item --sqldump
 
