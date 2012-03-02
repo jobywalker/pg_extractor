@@ -129,6 +129,7 @@ sub get_options {
         'port|p=i',
         'pgpass=s',
         'dbname|d=s',
+        'dbdir=s',
         'pgdump=s',
         'pgrestore=s',
         'pgdumpall=s',
@@ -264,12 +265,18 @@ sub set_config {
     my $workingdir = cwd();
     my $real_server_name=hostname;
     my $customhost;
+    my $customdb;
     if ($O->{'hostname'}) {
         $customhost = $O->{'hostname'};
     } else {
         chomp ($customhost = $real_server_name);
     }
-    $O->{'basedir'} = File::Spec->catdir($workingdir, $customhost, $ENV{PGDATABASE});
+    if ($O->{'dbdir'}) {
+        $customdb = $O->{'dbdir'};
+    } else {
+        $customdb = $ENV{PGDATABASE}
+    }
+    $O->{'basedir'} = File::Spec->catdir($workingdir, $customhost, $customdb);
 
 
     if ($O->{'N'} || $O->{'N_file'} || $O->{'T'} || $O->{'T_file'} ||
@@ -1064,6 +1071,10 @@ base directory for ddl export. ddlbase is from old version that was schema only.
 =item --hostname
 
 hostname of the database server; used as directory name under --basedir
+
+=item --dbdir
+
+database name (replaces --dbname as the directory name); used as directory under --hostname (If you are extracting multiple databases this is unsafe)
 
 =item --pgdump
 

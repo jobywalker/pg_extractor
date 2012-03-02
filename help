@@ -53,6 +53,10 @@ OPTIONS
     --hostname
         hostname of the database server; used as directory name under --basedir
 
+   −−dbdir
+       database name (replaces −−dbname as the directory name); used as directory under 
+       −−hostname (If you are extracting multiple databases this is unsafe)
+
     --pgdump
         location of pg_dump executable (Default: searches $PATH )
 
