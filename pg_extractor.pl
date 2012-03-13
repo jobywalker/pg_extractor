@@ -143,6 +143,7 @@ sub get_options {
         'getdata!',
         'Fc!',
         'sqldump!',
+        'clean!',
         'N=s',
         'N_file=s',
         'n=s',
@@ -223,6 +224,10 @@ sub set_config {
             die("NOTICE: No output options set. Please set one or more of the following: --gettables, --getviews, --getprocs, --gettypes, --getroles. Or --getall for all. Use --help to show all options\n");
         }
     }
+    
+    if ($O->{'getdata'} && !$O->{'gettables'}) {
+        die "Cannot dump data without dumping tables. Use --gettables or --getall.\n";
+    }
 
     if (!$O->{'gettables'} && ($O->{'T'} || $O->{'T_file'} || $O->{'t'} || $O->{'t_file'})) {
         die "Cannot include/exclude tables without setting option to export tables (--gettables or --getall).\n";
@@ -236,11 +241,9 @@ sub set_config {
         die "Cannot include/exclude functions without setting option to export functions (--getfuncs or --getall).\n";
     }
 
-    #TODO for some reason not having getdata will not fire this exception.
-    if ( (!$O->{'getdata'} || !$O->{'gettables'}) && ($O->{'inserts'} || $O->{'column-inserts'} ) ) {
-        die "Must set --gettables or --getall if using --inserts or --column-inserts.\n";
+    if ( (!$O->{'gettables'} && ($O->{'inserts'} || $O->{'column-inserts'})) || (!$O->{'getdata'} && ($O->{'inserts'} || $O->{'column-inserts'})) ) {
+        die "Must set --gettables or --getall and be dumping data with --getdata if using --inserts or --column-inserts.\n";
     }
-
 
     # TODO Redo option combinations to work like check_postgres (exclude then include)
     #      Until then only allowing one or the other
@@ -254,12 +257,15 @@ sub set_config {
     if ($O->{'svndel'} && !$O->{'svn'}) {
         die "Cannot specify svn deletion without --svn option.\n";
     }
+    
+    if ( ($O->{'gitdel'} && !$O->{'git'}) && ($O->{'gitdel'} && !$O->{'gitpush'}) ) 
+    {
+        die "Cannot specify git deletion without --git or --gitpush option.\n";
+    }
 
     if ( $O->{'git'} && $O->{'gitpush'} ) {
         die "Use either --git or --gitpush. --gitpush will do a local commit as well as a remote push";
     }
-
-    #TODO if gitdel is set and neither git nor gitpush is set, error out
 
     chdir $O->{'basedir'};
     my $workingdir = cwd();
@@ -452,8 +458,6 @@ sub build_object_lists {
                 # If the function definition contains the variable names to be used, then it's nearly impossible to split out
                 # argument types from the variable name so it can match against the actual function definition.
                 # Reported to postgres devs as bug #6428.
-
-                # Maybe make a separate comment file for functions?
 
                 ($objid, $objtype, $objschema, $objname, $objowner) = /(\d+;\s\d+\s\d+)\s(\S+)\s(\S+)\s\S+\s(.*\))\s(\S+)/;
 
@@ -673,6 +677,9 @@ sub create_ddl_files {
             if ($O->{'no-acl'}) {
                 $pgdumpcmd .= " --no-acl ";
             }
+            if ($O->{'clean'}) {
+                $pgdumpcmd .= " --clean ";
+            }
             $pgdumpcmd .= " > $fqfn.sql";
             system $pgdumpcmd;
         } else {
@@ -735,6 +742,9 @@ sub create_ddl_files {
             $restorecmd = "$O->{pgrestore} -L $tmp_ddl_file -f $fqfn.sql ";
             if ($O->{'no-owner'}) {
                 $restorecmd .= " --no-owner ";
+            }
+            if ($O->{'clean'}) {
+                $restorecmd .= " --clean ";
             }
             $restorecmd .= " $dmp_tmp_file";
             ##print "final restore command: $restorecmd\n";
@@ -1020,7 +1030,7 @@ A script for doing advanced dump filtering and managing schema for PostgreSQL da
  - Requires using a trusted user or a .pgpass file. No option to send password.
  - For all options that use an external file list, separate each item in the file by a newline.
     pg_extractor.pl will accept a list of objects output from a psql generated file using "\t \o filename"
- - If no schema name is given in an filter for tables, it will assume public schema (same as pg_dump). For other objects, not designating
+ - If no schema name is given in a filter for tables, it will assume public schema (same as pg_dump). For other objects, not designating
     a schema will match across all schemas included in given filters. So, recommended to give full schema.object name for all objects.
  - If a special character is used in an object name, it will be replaced with a comma followed by its hexcode
     Ex: table|name becomes table,7cname.sql
@@ -1281,6 +1291,10 @@ File containing the commit message to send to git or svn
 
 Use when running again on the same destination directory as previous runs so that objects deleted from the
 database or items that don't match your filters also have their old files deleted. WARNING: This WILL delete ALL .sql files in the destination folder(s) which don't match your desired output. Not required when using the --svndel option.
+
+=item --clean
+
+Adds DROP commands to the SQL output of all objects. Allows the same behavior as OR REPLACE since ACLs are included with all objects. WARNING: For overloaded function/aggregates, this adds drop commands for all versions to the single output file.
 
 =item --orreplace
 
