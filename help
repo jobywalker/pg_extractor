@@ -53,9 +53,13 @@ OPTIONS
     --hostname
         hostname of the database server; used as directory name under --basedir
 
-   −−dbdir
+    −−dbdir
        database name (replaces −−dbname as the directory name); used as directory under 
        −−hostname (If you are extracting multiple databases this is unsafe)
+
+    --schemasubdir
+        breakout each schema's content into subdirectories under the database
+        directory (hostname/databasedir/schema)
 
     --pgdump
         location of pg_dump executable (Default: searches $PATH )
