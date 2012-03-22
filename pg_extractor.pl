@@ -139,6 +139,7 @@ sub get_options {
         'pgpass=s',
         'dbname|d=s',
         'dbdir=s',
+        'schemasubdir!',
         'pgdump=s',
         'pgrestore=s',
         'pgdumpall=s',
@@ -310,9 +311,9 @@ sub set_config {
 }
 
 sub create_dirs {
-    my $newdir = shift @_;
+    unshift (@_ , $O->{basedir});
+    my $destdir = File::Spec->catdir(@_);
 
-    my $destdir = File::Spec->catdir($O->{'basedir'}, $newdir);
     if (!-e $destdir) {
        eval { mkpath($destdir) };
        if ($@) {
@@ -655,8 +656,10 @@ sub build_object_lists {
 sub create_ddl_files {
     my (@objlist) = (@{$_[0]});
     my $destdir = $_[1];
-    my ($restorecmd, $pgdumpcmd, $fqfn, $funcname, $format);
-    my $fulldestdir = create_dirs($destdir);
+    my ($restorecmd, $pgdumpcmd, $fqfn, $funcname, $format, $fulldestdir);
+    if (!$O->{'schemasubdir'}) {
+        $fulldestdir = create_dirs($destdir);
+    }
     my $tmp_ddl_file = File::Temp->new( TEMPLATE => 'pg_extractor_XXXXXXXX',
                                         SUFFIX => '.tmp',
                                         DIR => $O->{'basedir'});
@@ -679,6 +682,9 @@ sub create_ddl_files {
             my $namefile = $t->{'name'};
             # account for special characters in object name
             $namefile =~ s/(\W)/sprintf(",%02x", ord $1)/ge;
+            if ($O->{'schemasubdir'}) {
+                $fulldestdir = create_dirs($namefile, $destdir);
+            }
             $fqfn = File::Spec->catfile($fulldestdir, "$namefile");
         }elsif ($t->{'name'} =~ /\(.*\)/) {
             $funcname = $t->{'fnname'};
@@ -686,6 +692,9 @@ sub create_ddl_files {
             # account for special characters in object name
             $schemafile =~ s/(\W)/sprintf(",%02x", ord $1)/ge;
             $funcname =~ s/(\W)/sprintf(",%02x", ord $1)/ge;
+            if ($O->{'schemasubdir'}) {
+                $fulldestdir = create_dirs($schemafile, $destdir);
+            }
             $fqfn = File::Spec->catfile($fulldestdir, "$schemafile.$funcname");
         } else {
             my $schemafile = $t->{'schema'};
@@ -693,6 +702,9 @@ sub create_ddl_files {
             # account for special characters in object name
             $schemafile =~ s/(\W)/sprintf(",%02x", ord $1)/ge;
             $namefile =~ s/(\W)/sprintf(",%02x", ord $1)/ge;
+            if ($O->{'schemasubdir'}) {
+                $fulldestdir = create_dirs($schemafile, $destdir);
+            }
             $fqfn = File::Spec->catfile($fulldestdir, "$schemafile.$namefile");
         }
 
@@ -1110,6 +1122,10 @@ hostname of the database server; used as directory name under --basedir
 =item --dbdir
 
 database name (replaces --dbname as the directory name); used as directory under --hostname (If you are extracting multiple databases this is unsafe)
+
+=item --schemasubdir
+
+breakout each schema's content into subdirectories under the database directory (hostname/databasedir/schema)
 
 =item --pgdump
 
