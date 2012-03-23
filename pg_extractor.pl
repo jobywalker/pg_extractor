@@ -472,8 +472,14 @@ sub build_object_lists {
             ($objsubtype) = /\d+;\s\d+\s\d+\s\S+\s\S+\s(\S+)/;
 
             if ($objsubtype eq "FUNCTION" || $objsubtype eq "AGGREGATE") {
+
+                # pg_restore -l adds the variable name into the COMMENT function signature if variable names are used in the parameter list,
+                # but it doesn't put them in the signature of the function itself. Patch from jobywalker has workaround for pg_extractor to handle this.
+                # Reported to postgres devs as bug #6428 to fix the pg_restore output to be consistent.
+
                 ($objid, $objtype, $objschema, $objname, $objowner) = /(\d+;\s\d+\s\d+)\s(\S+)\s(\S+)\s\S+\s(.*\))\s(\S+)/;
                 $fnname = substr($objname, 0, index($objname, "\("));
+                
             } elsif ($objsubtype eq "VIEW" || $objsubtype eq "TYPE") {
                 ($objid, $objtype, $objschema, $objname, $objowner) = /(\d+;\s\d+\s\d+)\s(\S+)\s(\S+)\s\S+\s(\S+)\s(\S+)/;
             } else {
@@ -599,7 +605,6 @@ sub build_object_lists {
                     next RESTORE_LABEL;
                 }
             }
-
             if ($objtype eq "FUNCTION") {
                 push @functionlist, {
                     "id" => $objid,
@@ -1114,7 +1119,7 @@ export view ddl
 
 =item --getfuncs
 
-export function and/or aggregate ddl. Overloaded functions will all be in the same base filename
+export function and/or aggregate ddl. Overloaded functions will all be in the same base filename. Custom aggregates are put in a separate folder than regular functions.
 
 =item --gettypes
 
