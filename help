@@ -53,9 +53,17 @@ OPTIONS
     --hostname
         hostname of the database server; used as directory name under --basedir
 
-   −−dbdir
-       database name (replaces −−dbname as the directory name); used as directory under 
-       −−hostname (If you are extracting multiple databases this is unsafe)
+    --dbdir
+        database name (replaces --dbname as the directory name); used as directory under
+        --hostname (If you are extracting multiple databases this is unsafe)
+
+    --rolesdir
+        name of the directory under database name to place the export file with role data.
+        no impact without the --getroles or --getall option.
+
+    --schemasubdir
+        breakout each schema's content into subdirectories under the database directory
+        (hostname/databasedir/schema)
 
     --pgdump
         location of pg_dump executable (Default: searches $PATH )
@@ -68,6 +76,9 @@ OPTIONS
         are used (Default: searches $PATH )
 
   filters
+
+    --getschemata
+        export schema ddl
 
     --gettables
         export table ddl. Each file includes table's indexes, constraints, sequences,
@@ -237,6 +248,10 @@ OPTIONS
         Also generate a pg_dump file. Will only contain schemas and tables designated by
         original options. Note that other filtered items will NOT be filtered out of the
         dump file.
+
+    --sqldumpdir
+        name of the directory under the database name directory to place the pg_dump file.
+        has no impact without the --sqldump option
 
     --quiet
         Suppress all program output
