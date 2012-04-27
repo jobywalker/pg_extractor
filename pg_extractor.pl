@@ -479,7 +479,6 @@ sub build_object_lists {
 
                 ($objid, $objtype, $objschema, $objname, $objowner) = /(\d+;\s\d+\s\d+)\s(\S+)\s(\S+)\s\S+\s(.*\))\s(\S+)/;
                 $fnname = substr($objname, 0, index($objname, "\("));
-                
             } elsif ($objsubtype eq "VIEW" || $objsubtype eq "TYPE") {
                 ($objid, $objtype, $objschema, $objname, $objowner) = /(\d+;\s\d+\s\d+)\s(\S+)\s(\S+)\s\S+\s(\S+)\s(\S+)/;
             } else {
@@ -756,7 +755,9 @@ sub create_ddl_files {
                         # if overload found, remove from main @objlist so it doesn't get output again.
                         splice(@objlist,$dupeoffset,1)
                     }
-                    $dupeoffset++;
+                    else {
+                        $dupeoffset++;
+                    }
                 }
                 # add to current file output ACLs and Comments based on function name (to catch acls and comments for 
                 # functions with the same signature)
