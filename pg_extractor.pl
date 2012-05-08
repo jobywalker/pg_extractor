@@ -479,7 +479,6 @@ sub build_object_lists {
 
                 ($objid, $objtype, $objschema, $objname, $objowner) = /(\d+;\s\d+\s\d+)\s(\S+)\s(\S+)\s\S+\s(.*\))\s(\S+)/;
                 $fnname = substr($objname, 0, index($objname, "\("));
-                
             } elsif ($objsubtype eq "VIEW" || $objsubtype eq "TYPE") {
                 ($objid, $objtype, $objschema, $objname, $objowner) = /(\d+;\s\d+\s\d+)\s(\S+)\s(\S+)\s\S+\s(\S+)\s(\S+)/;
             } else {
@@ -756,7 +755,9 @@ sub create_ddl_files {
                         # if overload found, remove from main @objlist so it doesn't get output again.
                         splice(@objlist,$dupeoffset,1)
                     }
-                    $dupeoffset++;
+                    else {
+                        $dupeoffset++;
+                    }
                 }
                 # add to current file output ACLs and Comments based on function name (to catch acls and comments for 
                 # functions with the same signature)
@@ -918,31 +919,33 @@ sub git_commit {
 sub svn_commit {
 
     my (@svn_add, @svn_ignored);
-    my $svnuser = " ";
-    if ($O->{'svn_userfile'}) {
-        open my $fh, "<", $O->{'svn_userfile'} or die_cleanup("Cannot open filter file for reading [$O->{'svn_userfile'}]: $!");
-        $svnuser = <$fh>;
-        chomp($svnuser);
-        close $fh;
-    }
+
     my $svn_stat_cmd = "$O->{'svncmd'} st $O->{'basedir'}";
-    foreach my $s (`$svn_stat_cmd`) {
-        if ($s !~ /\.sql$|.pgr$/) {
-            push @svn_ignored, $s;
-            next;
+    for my $filename (`$svn_stat_cmd`) {
+
+        chomp $filename;
+        $filename =~ s/\A\?\s+(\S+)\z/$1/;
+
+        # add any new .sql or .pgr files along with any new directories.
+
+        if ( $filename =~ /\.sql\z/
+             or $filename =~ /\.pgr\z/
+             or -d $filename ) {
+                push (@svn_add,$filename)
         }
-        if ($s =~ /^\?\s+(\S+)$/) {
-            push @svn_add, $1;
+        else  {
+            push (@svn_ignored,$filename)
         }
     }
 
     foreach my $i (@svn_ignored) {
-        print "ignored: $i" if !$O->{'quiet'};
+        print "ignored: $i\n" if !$O->{'quiet'};
     }
     foreach my $a (@svn_add) {
-        my $svn_add_cmd = "$O->{svncmd} add --quiet $a";
-        print "$svn_add_cmd\n" if !$O->{'quiet'};
-        system $svn_add_cmd;
+        my @svn_add_cmd = ($O->{'svncmd'},'add',$a);
+        push (@svn_add_cmd,'-q') if $O->{'quiet'};
+        print "@svn_add_cmd\n" if !$O->{'quiet'};
+        system @svn_add_cmd;
     }
 
     #TODO add commands to cleanup empty folders
@@ -950,9 +953,13 @@ sub svn_commit {
         my @files_to_delete = files_to_delete();
         if (scalar(@files_to_delete > 0)) {
             foreach my $d (@files_to_delete) {
-                my $svn_del_cmd = "$O->{svncmd} del $d";
-                print "$svn_del_cmd\n" if !$O->{'quiet'};
-                system $svn_del_cmd;
+                my @svn_del_cmd = ($O->{'svncmd'},'del',$d);
+                push (@svn_del_cmd,'-q') if $O->{'quiet'};
+                print "@svn_del_cmd\n" if !$O->{'quiet'};
+                system @svn_del_cmd;
+                if ( $? == -1 ) {
+                    print "command '@svn_del_cmd' failed: $!\n";
+                }
             }
         } else {
             print "No files to delete from SVN\n" if !$O->{'quiet'};
@@ -970,11 +977,23 @@ sub svn_commit {
         print $svn_commit_msg_file $O->{'commitmsg'}  if !$O->{'quiet'};
     }
 
+    my $svnuser;
+    if ($O->{'svn_userfile'}) {
+        open my $fh, "<", $O->{'svn_userfile'} or die_cleanup("Cannot open filter file for reading [$O->{'svn_userfile'}]: $!");
+        $svnuser = <$fh>;
+        chomp($svnuser);
+        close $fh;
+    }
     chdir $O->{'basedir'};
-    my $svn_commit_cmd = "$O->{svncmd} $svnuser -F $svn_commit_msg_file commit";
-    print "svn commit command: $svn_commit_cmd\n"  if !$O->{'quiet'}; ;
-    system $svn_commit_cmd;
-
+    my @svn_commit_cmd = ($O->{'svncmd'});
+    push (@svn_commit_cmd,$svnuser) if defined $svnuser;
+    push (@svn_commit_cmd,'-q') if $O->{'quiet'};
+    push (@svn_commit_cmd,'-F',$svn_commit_msg_file,'commit');
+    print "@svn_commit_cmd\n"  if !$O->{'quiet'}; ;
+    system @svn_commit_cmd;
+    if ( $? == -1 ) {
+        print "command '@svn_commit_cmd' failed: $!\n";
+    }
 }
 
 sub or_replace {
