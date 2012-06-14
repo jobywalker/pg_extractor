@@ -3,12 +3,12 @@ use strict;
 use warnings;
 
 # PGExtractor, a script for doing advanced dump filtering and managing schema for PostgreSQL databases
-# Copyright 2011, OmniTI, Inc. (http://www.omniti.com/)
 # See complete license and copyright information at the bottom of this script
 # For newer versions of this script, please see:
 # https://github.com/omniti-labs/pg_extractor
 # POD Documentation also available by issuing pod2text pg_extractor.pl
 
+# Version 1.0.0
 
 use English qw( -no_match_vars);
 use File::Copy;
@@ -924,17 +924,18 @@ sub svn_commit {
     for my $filename (`$svn_stat_cmd`) {
 
         chomp $filename;
-        $filename =~ s/\A\?\s+(\S+)\z/$1/;
+        
 
         # add any new .sql or .pgr files along with any new directories.
 
-        if ( $filename =~ /\.sql\z/
-             or $filename =~ /\.pgr\z/
-             or -d $filename ) {
+        if ($filename =~ /^\?/ ) {
+            print "found new file\n";
+            $filename =~ s/^\?\s+(\S+)$/$1/;
+            if ($filename =~ /\.sql$|.pgr$/ or -d $filename)  {
                 push (@svn_add,$filename)
-        }
-        else  {
-            push (@svn_ignored,$filename)
+            } else  {
+                push (@svn_ignored,$filename)
+            }
         }
     }
 
@@ -942,10 +943,10 @@ sub svn_commit {
         print "ignored: $i\n" if !$O->{'quiet'};
     }
     foreach my $a (@svn_add) {
-        my @svn_add_cmd = ($O->{'svncmd'},'add',$a);
-        push (@svn_add_cmd,'-q') if $O->{'quiet'};
-        print "@svn_add_cmd\n" if !$O->{'quiet'};
-        system @svn_add_cmd;
+        my $svn_add_cmd = $O->{'svncmd'} . ' add ' . $a;
+        $svn_add_cmd .= ' -q' if $O->{'quiet'};
+        print "$svn_add_cmd\n" if !$O->{'quiet'};
+        system $svn_add_cmd;
     }
 
     #TODO add commands to cleanup empty folders
@@ -953,12 +954,12 @@ sub svn_commit {
         my @files_to_delete = files_to_delete();
         if (scalar(@files_to_delete > 0)) {
             foreach my $d (@files_to_delete) {
-                my @svn_del_cmd = ($O->{'svncmd'},'del',$d);
-                push (@svn_del_cmd,'-q') if $O->{'quiet'};
-                print "@svn_del_cmd\n" if !$O->{'quiet'};
-                system @svn_del_cmd;
+                my $svn_del_cmd = $O->{'svncmd'} . ' del ' . $d;
+                $svn_del_cmd .= ' -q' if $O->{'quiet'};
+                print "$svn_del_cmd\n" if !$O->{'quiet'};
+                system $svn_del_cmd;
                 if ( $? == -1 ) {
-                    print "command '@svn_del_cmd' failed: $!\n";
+                    print "command '$svn_del_cmd' failed: $!\n";
                 }
             }
         } else {
@@ -985,14 +986,14 @@ sub svn_commit {
         close $fh;
     }
     chdir $O->{'basedir'};
-    my @svn_commit_cmd = ($O->{'svncmd'});
-    push (@svn_commit_cmd,$svnuser) if defined $svnuser;
-    push (@svn_commit_cmd,'-q') if $O->{'quiet'};
-    push (@svn_commit_cmd,'-F',$svn_commit_msg_file,'commit');
-    print "@svn_commit_cmd\n"  if !$O->{'quiet'}; ;
-    system @svn_commit_cmd;
+    my $svn_commit_cmd = ($O->{'svncmd'});
+    $svn_commit_cmd .= " $svnuser" if defined $svnuser;
+    $svn_commit_cmd .= " -q" if $O->{'quiet'};
+    $svn_commit_cmd .= " -F $svn_commit_msg_file commit";
+    print "$svn_commit_cmd\n"  if !$O->{'quiet'}; ;
+    system $svn_commit_cmd;
     if ( $? == -1 ) {
-        print "command '@svn_commit_cmd' failed: $!\n";
+        print "command '$svn_commit_cmd' failed: $!\n";
     }
 }
 
@@ -1004,10 +1005,10 @@ sub or_replace {
         print "no functions or views\n";
         return;
     }
-    if ($O->{'getfuncs'}) {
+    if ($O->{'getfuncs'} && (-d "${prefix}function") ) {
         $replace_cmd .= " ${prefix}function/*";
     }
-    if ($O->{'getviews'}) {
+    if ($O->{'getviews'} && (-d "${prefix}view") ) {
         $replace_cmd .= " ${prefix}view/*";
     }
     print "$replace_cmd\n" if !$O->{'quiet'};
@@ -1389,7 +1390,7 @@ perl pg_extractor.pl -U postgres --dbname=mydb --svn --svncmd=/opt/svn/bin/svn -
 
 PGExtractor is released under the PostgreSQL License, a liberal Open Source license, similar to the BSD or MIT licenses.
 
-Copyright (c) 2011 OmniTI, Inc.
+Copyright (c) 2012 OmniTI, Inc.
 
 Permission to use, copy, modify, and distribute this software and its documentation for any purpose, without fee, and without a written agreement is hereby granted, provided that the above copyright notice and this paragraph and the following two paragraphs appear in all copies.
 
