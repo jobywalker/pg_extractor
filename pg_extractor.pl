@@ -8,7 +8,7 @@ use warnings;
 # https://github.com/omniti-labs/pg_extractor
 # POD Documentation also available by issuing pod2text pg_extractor.pl
 
-# Version 1.2.0
+# Version 1.2.1
 
 use Cwd;
 use English qw( -no_match_vars);
@@ -27,7 +27,6 @@ my $optional_modules = {
 };
 my $argvfile_load = can_load(modules => $optional_modules);
 
-
 my ($excludeschema_dump, $includeschema_dump, $excludetable_dump, $includetable_dump) = ("","","","");
 my (@includeview, @excludeview);
 my (@includefunction, @excludefunction);
@@ -36,6 +35,7 @@ my (@regex_incl, @regex_excl);
 my (@schemalist, @tablelist, @viewlist, @functionlist, @aggregatelist, @typelist, @acl_list, @commentlist);
 my (%createdfiles);
 
++my %ignoredirs = ('.svn' => 1, '.git' => 1);
 
 ################ Run main program subroutines
 #my $start_time = time();
@@ -1021,22 +1021,20 @@ sub svn_commit {
     }
 }
 
-sub or_replace {
-    my $replace_cmd = "/usr/bin/env perl -pi -e 's/CREATE (FUNCTION|VIEW)/CREATE OR REPLACE \$1/'";
-    my $prefix = $O->{'schemasubdir'} ? '*/' : '';
-    chdir $O->{'basedir'};
-    unless ($O->{'getfuncs'} || $O->{'getviews'}) {
-        print "no functions or views\n";
-        return;
-    }
-    if ($O->{'getfuncs'} && (-d "${prefix}function") ) {
-        $replace_cmd .= " ${prefix}function/*";
-    }
-    if ($O->{'getviews'} && (-d "${prefix}view") ) {
-        $replace_cmd .= " ${prefix}view/*";
-    }
-    print "$replace_cmd\n" if !$O->{'quiet'};
+sub or_replace_action {
+	if ($ignoredirs{$_}) {
+        $File::Find::prune = 1;
+		return;
+	}
+	return unless -f;
+    return unless $File::Find::name =~ /function|view/;
+    my $replace_cmd = "/usr/bin/env perl -pi -e 's/CREATE (FUNCTION|VIEW)/CREATE OR REPLACE \$1/' $_";
+    print "$replace_cmd\n" unless $O->{'quiet'};
     system $replace_cmd;
+}
+
+sub or_replace {
+    find (\&or_replace_action,$O->{'basedir'});
 }
 
 sub die_cleanup {
@@ -1141,7 +1139,7 @@ breakout each schema's content into subdirectories under the database directory 
 
 =item --pgbin
 
-location of the required postgresql binaries (pg_dump, pg_restore, pg_dumpall). If these are all in the same location, you can use this single option instead of the individual --pgdump, --pgrestore and --pgdumpall options.
+location of the required postgresql binaries (pg_dump, pg_restore, pg_dumpall). If these are all in the same location, you can use this single option instead of the individual --pgdump, --pgrestore and --pgdumpall options. (Default: searches $PATH )
 
 =item --pgdump
 
@@ -1351,7 +1349,7 @@ File containing the commit message to send to git or svn
 =item --delete
 
 Use when running again on the same destination directory as previous runs so that objects deleted from the
-database or items that don't match your filters also have their old files deleted. WARNING: This WILL delete ALL .sql files in the destination folder(s) which don't match your desired output. Not required when using the --svndel option.
+database or items that don't match your filters also have their old files deleted. WARNING: This WILL delete ALL .sql files in the destination folder(s) which don't match your desired output. Not required when using the --svndel or --gitdel option.
 
 =item --clean
 
