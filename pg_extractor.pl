@@ -36,7 +36,7 @@ my (@schemalist, @tablelist, @viewlist, @functionlist, @aggregatelist, @typelist
 my (@sequencelist, @acl_list, @commentlist, @triggerlist, @rulelist);
 my (%createdfiles);
 
-+my %ignoredirs = ('.svn' => 1, '.git' => 1);
+my %ignoredirs = ('.svn' => 1, '.git' => 1);
 
 ################ Run main program subroutines
 #my $start_time = time();
