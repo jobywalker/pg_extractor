@@ -18,14 +18,9 @@ use File::Path 'mkpath';
 use File::Spec;
 use File::Temp;
 use Getopt::Long qw( :config no_ignore_case );
-use Module::Load::Conditional qw(can_load);
+use Getopt::Argvfile;
 use Pod::Usage;
 use Sys::Hostname;
-
-my $optional_modules = {
-	'Getopt::ArgvFile' => undef,
-};
-my $argvfile_load = can_load(modules => $optional_modules);
 
 my ($excludeschema_dump, $includeschema_dump, $excludetable_dump, $includetable_dump) = ("","","","");
 my (@includeview, @excludeview);
@@ -140,9 +135,7 @@ exit;
 
 sub get_options {
 
-	if ($argvfile_load) {
 		Getopt::ArgvFile::argvFile(fileOption=>'options_file');
-	}
 
     my %o = (
         'pgdump' => "pg_dump",
