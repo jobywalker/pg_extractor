@@ -135,7 +135,7 @@ exit;
 
 sub get_options {
 
-		Getopt::ArgvFile::argvFile(fileOption=>'options_file');
+	Getopt::ArgvFile::argvFile(fileOption=>'options_file');
 
     my %o = (
         'pgdump' => "pg_dump",
@@ -276,7 +276,7 @@ sub set_config {
     if ($O->{'pgbin'} && $O->{'pgdumpall'} eq "pg_dumpall") {
         $O->{'pgdumpall'} = File::Spec->catdir($O->{'pgbin'}, "pg_dumpall");
     }
-    
+
     if ($O->{'getdata'} && !$O->{'gettables'}) {
         die "Cannot dump data without dumping tables. Use --gettables or --getall.\n";
     }
@@ -309,8 +309,8 @@ sub set_config {
     if ($O->{'svndel'} && !$O->{'svn'}) {
         die "Cannot specify svn deletion without --svn option.\n";
     }
-    
-    if ( ($O->{'gitdel'} && !$O->{'git'} && !$O->{'gitpush'}) ) 
+
+    if ( ($O->{'gitdel'} && !$O->{'git'} && !$O->{'gitpush'}) )
     {
         die "Cannot specify git deletion without --git or --gitpush option.\n";
     }
@@ -814,6 +814,21 @@ sub create_ddl_files {
             }
             $pgdumpcmd .= " > $fqfn.sql";
             system $pgdumpcmd;
+        } elsif ($t->{'type'} eq "VIEW") {
+            #TODO see if there's a better way to handle this. Seems sketchy but works for now
+            # extra quotes to keep the shell from eating the doublequotes & allow for mixed case or special chars
+            $pgdumpcmd = "$O->{pgdump} $format --table=\'\"$t->{schema}\"\'.\'\"$t->{name}\"\'";
+            if ($O->{'no-owner'}) {
+                $pgdumpcmd .= " --no-owner ";
+            }
+            if ($O->{'no-acl'}) {
+                $pgdumpcmd .= " --no-acl ";
+            }
+            if ($O->{'clean'}) {
+                $pgdumpcmd .= " --clean ";
+            }
+            $pgdumpcmd .= " > $fqfn.sql";
+            system $pgdumpcmd;
         } else {
             # TODO this is a mess but, amazingly, it works. try and tidy up if possible.
             # put all functions with same basename in the same output file
@@ -833,7 +848,7 @@ sub create_ddl_files {
                         $dupeoffset++;
                     }
                 }
-                # add to current file output ACLs and Comments based on function name (to catch acls and comments for 
+                # add to current file output ACLs and Comments based on function name (to catch acls and comments for
                 # functions with the same signature)
                 foreach my $a (@acl_list) {
                     if ($a->{'schema'} eq $t->{'schema'} && $a->{'fnname'} eq $t->{'fnname'}) {
@@ -916,16 +931,16 @@ sub delete_files {
 # Get a list of the files on disk to remove from disk. Kept as separate function so SVN/Git can use to delete files from VCS as well.
 sub files_to_delete {
     my @files_to_delete;
-    
-    find( 
-        sub { 
+
+    find(
+        sub {
             my $f = $File::Find::name;
             if (-f $f && $f =~ /\.sql$|.pgr$/ && !exists $createdfiles{$f}) {
                 push(@files_to_delete, $f);
             }
         }, $O->{'basedir'}
     );
-    
+
     return @files_to_delete;
 }
 
@@ -998,7 +1013,7 @@ sub svn_commit {
     for my $filename (`$svn_stat_cmd`) {
 
         chomp $filename;
-        
+
 
         # add any new .sql or .pgr files along with any new directories.
 
