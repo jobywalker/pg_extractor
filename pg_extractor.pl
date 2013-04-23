@@ -1087,13 +1087,13 @@ sub svn_commit {
 }
 
 sub or_replace_action {
-	if ($ignoredirs{$_}) {
+    if ($ignoredirs{$_}) {
         $File::Find::prune = 1;
-		return;
-	}
-	return unless -f;
-    return unless $File::Find::name =~ /function|view/;
-    my $replace_cmd = "/usr/bin/env perl -pi -e 's/CREATE (FUNCTION|VIEW)/CREATE OR REPLACE \$1/' $_";
+    return;
+    }
+    return unless -f;
+    return unless $File::Find::name =~ /function|view|table|rule/;
+    my $replace_cmd = "/usr/bin/env perl -pi -e 's/CREATE (FUNCTION|VIEW|RULE)/CREATE OR REPLACE \$1/' $_";
     print "$replace_cmd\n" unless $O->{'quiet'};
     system $replace_cmd;
 }
@@ -1434,7 +1434,7 @@ Adds DROP commands to the SQL output of all objects. Allows the same behavior as
 
 =item --orreplace
 
-Modifies the function and view ddl files to replace CREATE with CREATE OR REPLACE.
+Modifies the function, rule, table, and view ddl files to replace CREATE with CREATE OR REPLACE for functions, rules, and views.
 
 =item --sqldump
 
