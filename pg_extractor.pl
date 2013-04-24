@@ -18,7 +18,7 @@ use File::Path 'mkpath';
 use File::Spec;
 use File::Temp;
 use Getopt::Long qw( :config no_ignore_case );
-use Getopt::Argvfile;
+use Getopt::ArgvFile;
 use Pod::Usage;
 use Sys::Hostname;
 
