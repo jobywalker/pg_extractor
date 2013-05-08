@@ -106,6 +106,11 @@ if ($O->{'sqldump'}) {
     copy_sql_dump();
 }
 
+if ($O->{'sqldumptext'}) {
+    print "Creating pg_dump text file...\n" if !$O->{'quiet'};
+    gen_full_text_dump();
+}
+
 if ($O->{'orreplace'}) {
     print "Adding OR REPLACE clause...\n" if !$O->{'quiet'};
     or_replace()
@@ -180,6 +185,7 @@ sub get_options {
         'getdata!',
         'Fc!',
         'sqldump!',
+        'sqldumptext!',
         'clean!',
         'N=s',
         'N_file=s',
@@ -922,6 +928,14 @@ sub copy_sql_dump {
     $createdfiles{$pgdumpfile} = 1;
 }
 
+sub gen_full_text_dump {
+    my $dump_folder = create_dirs($O->{'sqldumpdir'});
+    my $full_dump_file = File::Spec->catfile($dump_folder, "$ENV{PGDATABASE}_pgdump.sql");
+    my $full_dump_cmd = "$O->{pgrestore} -f $full_dump_file $dmp_tmp_file";
+    system $full_dump_cmd;
+    $createdfiles{$full_dump_file} = 1;
+}
+
 #TODO add commands to cleanup empty folders
 sub delete_files {
     my @files_to_delete = files_to_delete();
@@ -1444,9 +1458,13 @@ Modifies the function, rule, table, and view ddl files to replace CREATE with CR
 Also generate a pg_dump file. Will only contain schemas and tables designated by original options.
 Note that other filtered items will NOT be filtered out of the dump file.
 
+=item --sqldumptext
+
+As --sqldump but the file will be a text formatted dumpfile instead of binary.
+
 =item --sqldumpdir
 
-name of the directory under the database name directory to place the pg_dump file.  has no impact without the --sqldump option
+Name of the directory under the database name directory to place the pg_dump file.  Has no impact without the --sqldump or --sqldumptext options.
 
 =item --quiet
 
