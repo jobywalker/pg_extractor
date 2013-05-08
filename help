@@ -284,9 +284,12 @@ OPTIONS
         original options. Note that other filtered items will NOT be filtered out of the
         dump file.
 
+    --sqldumptext
+        As --sqldump but the file will be a text formatted dumpfile instead of binary.
+
     --sqldumpdir
-        name of the directory under the database name directory to place the pg_dump file.
-        has no impact without the --sqldump option
+        Name of the directory under the database name directory to place the pg_dump file.
+        Has no impact without the --sqldump or --sqldumptext options.
 
     --quiet
         Suppress all program output
