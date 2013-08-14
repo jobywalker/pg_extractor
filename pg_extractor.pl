@@ -113,7 +113,7 @@ if ($O->{'sqldumptext'}) {
 
 if ($O->{'orreplace'} || $O->{'comment-whitespace'}) {
     if ($O->{'comment-whitespace'}) {
-        print "Removing trailing whitespace in SQL comments";
+        print "Removing trailing whitespace in SQL comments\n" if !$O->{'quiet'};
     }
     if ($O->{'orreplace'}) {
         print "Adding OR REPLACE clause...\n" if !$O->{'quiet'};
