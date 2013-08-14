@@ -276,6 +276,9 @@ OPTIONS
         function/aggregates, this adds drop commands for all versions to the single output
         file.
 
+    --comment-whitespace
+        Removes trailing whitespace from sql comments
+
     --orreplace
         Modifies the function and view ddl files to replace CREATE with CREATE OR REPLACE.
 
