@@ -111,9 +111,14 @@ if ($O->{'sqldumptext'}) {
     gen_full_text_dump();
 }
 
-if ($O->{'orreplace'}) {
-    print "Adding OR REPLACE clause...\n" if !$O->{'quiet'};
-    or_replace()
+if ($O->{'orreplace'} || $O->{'comment-whitespace'}) {
+    if ($O->{'comment-whitespace'}) {
+        print "Removing trailing whitespace in SQL comments\n" if !$O->{'quiet'};
+    }
+    if ($O->{'orreplace'}) {
+        print "Adding OR REPLACE clause...\n" if !$O->{'quiet'};
+    }
+    content_replace()
 }
 
 if ($O->{'svn'}) {
@@ -227,6 +232,7 @@ sub get_options {
         'commitmsgfn=s',
 
         'orreplace!',
+        'comment-whitespace!',
 
         'help|?',
 
@@ -1103,20 +1109,27 @@ sub svn_commit {
     }
 }
 
-sub or_replace_action {
+sub content_replace_action {
     if ($ignoredirs{$_}) {
         $File::Find::prune = 1;
     return;
     }
     return unless -f;
+    if ($O->{'comment-whitespace'}) {
+        my $replace_cmd = "/usr/bin/env perl -pi -e 's/(--.*) +$/\$1/' $_";
+        print "$replace_cmd\n" unless $O->{'quiet'};
+        system $replace_cmd;
+    }
     return unless $File::Find::name =~ /function|view|table|rule/;
-    my $replace_cmd = "/usr/bin/env perl -pi -e 's/CREATE (FUNCTION|VIEW|RULE)/CREATE OR REPLACE \$1/' $_";
-    print "$replace_cmd\n" unless $O->{'quiet'};
-    system $replace_cmd;
+    if ($O->{'orreplace'}) {
+        my $replace_cmd = "/usr/bin/env perl -pi -e 's/CREATE (FUNCTION|VIEW|RULE)/CREATE OR REPLACE \$1/' $_";
+        print "$replace_cmd\n" unless $O->{'quiet'};
+        system $replace_cmd;
+    }
 }
 
-sub or_replace {
-    find (\&or_replace_action,$O->{'basedir'});
+sub content_replace {
+    find (\&content_replace_action,$O->{'basedir'});
 }
 
 sub die_cleanup {
@@ -1448,6 +1461,10 @@ database or items that don't match your filters also have their old files delete
 =item --clean
 
 Adds DROP commands to the SQL output of all objects. Allows the same behavior as OR REPLACE since ACLs are included with all objects. WARNING: For overloaded function/aggregates, this adds drop commands for all versions to the single output file.
+
+=item --comment-whitespace
+
+Removes trailing whitespace from sql comments
 
 =item --orreplace
 
